@@ -26,14 +26,14 @@ class AppFixtures extends Fixture
         $devMetalGroups = [];
         for($i = 0; $i < 10; ++$i) {
             $devMetalGroup = new DevMetalGroup();
-            $devMetalGroup->setName($this->faker->userName());
+            $devMetalGroup->setName($this->faker->name());
             $manager->persist($devMetalGroup);
             $devMetalGroups[] = $devMetalGroup;
         }
 
         for($i = 0; $i < 100; ++$i) {
             $devMetalSong = new DevMetalSong();
-            $devMetalSong->setName($this->faker->name());
+            $devMetalSong->setName($this->faker->text(32));
             $devMetalSong->setAuthor($devMetalGroups[array_rand($devMetalGroups)]);
             $manager->persist($devMetalSong);
         }
