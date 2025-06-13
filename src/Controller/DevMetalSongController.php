@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\DevMetalSong;
+use App\Repository\DevMetalGroupRepository;
 use App\Repository\DevMetalSongRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -27,9 +28,11 @@ final class DevMetalSongController extends AbstractController
     }
 
     #[Route('', name: 'app_dev_metal_song_create',methods: ['POST'])]
-    public function create(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
+    public function create(Request $request,DevMetalGroupRepository $devMetalGroupRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
     {
         $newDevMetalSong = $serializer->deserialize($request->getContent(), DevMetalSong::class, 'json');
+        $devMetalGroupEntity = $devMetalGroupRepository->find($request->toArray()['author']);
+        $newDevMetalSong->setAuthor($devMetalGroupEntity);
         // Est égal à
         //        $data = $request->toArray();
         //        $devMetalSong->setName($data['name']);
@@ -49,9 +52,13 @@ final class DevMetalSongController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_dev_metal_song_update',methods: ['PUT', 'PATCH'])]
-    public function update(DevMetalSong $devMetalSong ,Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
+    public function update(DevMetalSong $devMetalSong ,DevMetalGroupRepository $devMetalGroupRepository, Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
     {
         $serializer->deserialize($request->getContent(), DevMetalSong::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $devMetalSong]);
+        if(isset($request->toArray()['author'])){
+            $devMetalGroupEntity = $devMetalGroupRepository->find($request->toArray()['author']);
+            $devMetalSong->setAuthor($devMetalGroupEntity ?? $devMetalSong->getAuthor());
+        }
         // Est égal à
         //        $data = $request->toArray();
         //        $devMetalSong->setName($data['name'] ?? $devMetalSong->getName());
