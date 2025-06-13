@@ -7,7 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
-
+use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: DevMetalGroupRepository::class)]
 class DevMetalGroup
 {
@@ -19,6 +19,13 @@ class DevMetalGroup
 
     #[ORM\Column(length: 255)]
     #[Groups(["devMetalSong", "devMetalGroup"])]
+    #[Assert\Length(
+        min: 5,
+        max: 50,
+        minMessage: 'Your dev metal group name must be at least {{ limit }} characters long, or {{ value }} is {{ value_length }} long',
+        maxMessage: 'Your first name cannot be longer than {{ limit }} characters',
+    )]
+    #[Assert\NotEqualTo('LED')]
     private ?string $name = null;
 
     /**

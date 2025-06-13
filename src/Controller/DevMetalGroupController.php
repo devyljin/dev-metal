@@ -12,29 +12,53 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 #[Route('/devmetal')]
 final class DevMetalGroupController extends AbstractController
 {
     #[Route('', name: 'app_dev_metal_group',methods: ['GET'])]
-    public function index(DevMetalGroupRepository $devMetalGroupRepository, SerializerInterface $serializer): JsonResponse
+    public function index(
+        DevMetalGroupRepository $devMetalGroupRepository,
+        SerializerInterface $serializer,
+        TagAwareCacheInterface $cache
+    ): JsonResponse
     {
 
-        $data = $devMetalGroupRepository->findAll();
-        $jsonData = $serializer->serialize($data, 'json', ["groups" => [ "devMetalGroup"]]);
+        $idCache = "devMetalGroup.findAll";
+        $cachedResources = $cache->get($idCache, function (ItemInterface $item) use ($devMetalGroupRepository, $serializer) {
+            $item->tag("devMetalGroup");
+            $item->tag("devMetalSong");
+            $data = $devMetalGroupRepository->findAll();
+            $jsonData = $serializer->serialize($data, 'json', ["groups" => [ "devMetalGroup"]]);
+            return $jsonData;
+        });
 
-        return new JsonResponse($jsonData, JsonResponse::HTTP_OK, [], true);
+//
+//
+//        $jsonData = $serializer->serialize($data, 'json', ["groups" => [ "devMetalGroup"]]);
+
+        return new JsonResponse($cachedResources, JsonResponse::HTTP_OK, [], true);
     }
 
     #[Route('', name: 'app_dev_metal_group_create',methods: ['POST'])]
-    public function create(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
+    public function create(TagAwareCacheInterface $cache, Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, ValidatorInterface $validator): JsonResponse
     {
         $newDevMetalGroup = $serializer->deserialize($request->getContent(), DevMetalGroup::class, 'json');
         // Est égal à
         //        $data = $request->toArray();
         //        $devMetalGroup->setName($data['name']);
+
+        $errors = $validator->validate($newDevMetalGroup);
+        if($errors->count() > 0){
+            return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
+
         $entityManager->persist($newDevMetalGroup);
         $entityManager->flush();
+        $cache->invalidateTags(["ga"]);
         $jsonData = $serializer->serialize($newDevMetalGroup, 'json', ["groups" => [ "devMetalGroup"]]);
         $location = $urlGenerator->generate('app_dev_metal_group_get', ['id' => $newDevMetalGroup->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
         return new JsonResponse($jsonData, JsonResponse::HTTP_CREATED, ["Location" => $location], true);
